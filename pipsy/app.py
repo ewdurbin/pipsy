@@ -87,5 +87,8 @@ def root_route(path):
             body+="<a href='%s'>%s</a><br/>\n" % (os.path.basename(key), os.path.basename(key))
     return PKG_TEMPLATE.format(body=body, pkg_name=pkg_name)
 
-if __name__ == "__main__":
+def main():
     APP.run(debug=True)
+
+if __name__ == "__main__":
+    main()

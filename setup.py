@@ -17,10 +17,12 @@ setup(name='pipsy',
       long_description=readme,
       author='Ernest W. Durbin III, Benjamin W. Smith',
       author_email='ewdurbin@gmail.com, benjaminwarfield@gmail.com',
-      packages=[],
+      packages=['pipsy'],
       url='http://github.com/pipsy/pipsy.py',
       install_requires=requirements,
-      scripts=['src/bin/pipsy'],
       platforms = 'Posix; MacOS X; Windows',
+      entry_points={
+          'console_scripts': 'pipsy=pipsy.app:main'
+      }
 ) 
 
