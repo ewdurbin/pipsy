@@ -12,7 +12,7 @@ requirements = [str(r.req) for r in requirements_txt]
 readme = open(os.path.join(cwd, 'README.md')).read()
 
 setup(name='pipsy',
-      version='0.1.0',
+      version='0.1.1',
       description='pypi ',
       long_description=readme,
       author='Ernest W. Durbin III, Benjamin W. Smith',

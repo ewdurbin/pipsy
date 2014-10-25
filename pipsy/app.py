@@ -17,6 +17,7 @@ sslify = SSLify(APP)
 PIPSY_BUCKET = os.getenv('PIPSY_BUCKET')
 PIPSY_SIMPLE_ROOT = os.getenv('PIPSY_SIMPLE_ROOT')
 
+
 class FlaskException(Exception):
 
     def __init__(self, message, status_code=None, payload=None):
@@ -31,7 +32,7 @@ class FlaskException(Exception):
         rv['message'] = self.message
         return rv
 
-SIMPLE_TEMPLATE="""
+SIMPLE_TEMPLATE = """
 <html>
 <head>
   <title>Simple Index</title>
@@ -43,7 +44,7 @@ SIMPLE_TEMPLATE="""
 </html>
 """
 
-PKG_TEMPLATE="""
+PKG_TEMPLATE = """
 <html>
 <head>
   <title>Links for {pkg_name}</title>
@@ -58,17 +59,19 @@ PKG_TEMPLATE="""
 s3_conn = boto.connect_s3()
 s3_bucket = s3_conn.get_bucket(PIPSY_BUCKET)
 
+
 @APP.errorhandler(FlaskException)
 def handle_flask_error(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
 
+
 @APP.route('/', methods=['GET'], defaults={'path': ''})
 @APP.route('/<path:path>')
 def root_route(path):
     keys = []
-    for key in s3_bucket.list(prefix=path,delimiter="/"):
+    for key in s3_bucket.list(prefix=path, delimiter="/"):
         keys.append(key.name)
     if len(keys) == 1:
         if keys[0] == path+"/":
@@ -78,17 +81,18 @@ def root_route(path):
     if path == PIPSY_SIMPLE_ROOT+"/":
         body = ""
         for key in keys:
-            body+="<a href='%s'>%s</a><br/>\n" % (os.path.basename(key[:-1]), os.path.basename(key[:-1]))
+            body += "<a href='%s'>%s</a><br/>\n" % (os.path.basename(key[:-1]), os.path.basename(key[:-1]))
         return SIMPLE_TEMPLATE.format(body=body)
     body = ""
     pkg_name = os.path.basename(path[:-1])
     for key in keys:
         if key != path:
-            body+="<a href='%s'>%s</a><br/>\n" % (os.path.basename(key), os.path.basename(key))
+            body += "<a href='%s'>%s</a><br/>\n" % (os.path.basename(key), os.path.basename(key))
     return PKG_TEMPLATE.format(body=body, pkg_name=pkg_name)
 
+
 def main():
-    APP.run(debug=True)
+    APP.run()
 
 if __name__ == "__main__":
     main()
