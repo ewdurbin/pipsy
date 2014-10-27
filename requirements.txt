@@ -6,3 +6,5 @@ Werkzeug==0.9.6
 boto==2.33.0
 itsdangerous==0.24
 wsgiref==0.1.2
+gunicorn==19.1.1
+gevent==1.0.1

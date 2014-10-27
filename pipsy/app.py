@@ -7,12 +7,9 @@ from flask import jsonify
 from flask import redirect
 from flask import url_for
 
-from flask_sslify import SSLify
-
 logging_handler = logging.StreamHandler()
 
 APP = Flask(__name__)
-sslify = SSLify(APP)
 
 PIPSY_BUCKET = os.getenv('PIPSY_BUCKET')
 PIPSY_SIMPLE_ROOT = os.getenv('PIPSY_SIMPLE_ROOT')
@@ -47,10 +44,11 @@ SIMPLE_TEMPLATE = """
 PKG_TEMPLATE = """
 <html>
 <head>
-  <title>Links for {pkg_name}</title>
+  <title>Links for {package_name}</title>
   <meta name="api-version" value="2" />
 </head>
 <body>
+<h1>Links for {package_name}</h1>
 {body}
 </body>
 </html>
@@ -71,24 +69,48 @@ def handle_flask_error(error):
 @APP.route('/<path:path>')
 def root_route(path):
     keys = []
+    path_with_seperator = path + "/"
     for key in s3_bucket.list(prefix=path, delimiter="/"):
         keys.append(key.name)
+
     if len(keys) == 1:
-        if keys[0] == path+"/":
-            return redirect(path+"/")
-        elif not keys[0].endswith("/"):
-            return "Not Found", 404
-    if path == PIPSY_SIMPLE_ROOT+"/":
-        body = ""
-        for key in keys:
-            body += "<a href='%s'>%s</a><br/>\n" % (os.path.basename(key[:-1]), os.path.basename(key[:-1]))
-        return SIMPLE_TEMPLATE.format(body=body)
-    body = ""
-    pkg_name = os.path.basename(path[:-1])
+        if keys[0] == path_with_seperator:
+            return redirect(path_with_seperator)
+
+    if len(keys) > 1:
+        pipsy_simple_root = PIPSY_SIMPLE_ROOT + "/"
+        possible_pkg_name = os.path.basename(path[:-1])
+        possible_pkg_path = "{0}/{1}/".format(PIPSY_SIMPLE_ROOT, possible_pkg_name)
+
+        if path == pipsy_simple_root:
+            return _simple_root(keys)
+        elif path == possible_pkg_path:
+            return _package_root(keys, path, possible_pkg_name)
+        else:
+            return _404('Not found')
+    else:
+        return _404('Not found')
+
+
+def _package_root(keys, path, package_name):
+    body = []
     for key in keys:
         if key != path:
-            body += "<a href='%s'>%s</a><br/>\n" % (os.path.basename(key), os.path.basename(key))
-    return PKG_TEMPLATE.format(body=body, pkg_name=pkg_name)
+            body.append("<a href='{0}'>{0}</a><br/>".format(os.path.basename(key)))
+
+    return PKG_TEMPLATE.format(body="\n".join(body), package_name=package_name)
+
+
+def _simple_root(keys):
+    body = []
+    for key in keys:
+        body.append("<a href='{0}'>{0}</a><br/>".format(os.path.basename(key[:-1])))
+
+    return SIMPLE_TEMPLATE.format(body="\n".join(body))
+
+
+def _404(message):
+    return message, 404
 
 
 def main():
