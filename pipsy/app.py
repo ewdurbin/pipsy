@@ -69,25 +69,21 @@ def handle_flask_error(error):
 @APP.route('/<path:path>')
 def root_route(path):
     keys = []
-    path_with_seperator = path + "/"
-    for key in s3_bucket.list(prefix=path, delimiter="/"):
+    path_with_seperator = "{0}/".format(path)
+    pipsy_simple_root = "{0}/".format(PIPSY_SIMPLE_ROOT)
+    possible_pkg_name = os.path.basename(path[:-1])
+    possible_pkg_path = "{0}/{1}/".format(PIPSY_SIMPLE_ROOT, possible_pkg_name)
+
+    for key in s3_bucket.list(prefix=path, delimiter='/'):
         keys.append(key.name)
 
-    if len(keys) == 1:
-        if keys[0] == path_with_seperator:
-            return redirect(path_with_seperator)
+    if len(keys) == 1 and keys[0] == path_with_seperator:
+        return redirect(path_with_seperator)
 
-    if len(keys) > 1:
-        pipsy_simple_root = PIPSY_SIMPLE_ROOT + "/"
-        possible_pkg_name = os.path.basename(path[:-1])
-        possible_pkg_path = "{0}/{1}/".format(PIPSY_SIMPLE_ROOT, possible_pkg_name)
-
-        if path == pipsy_simple_root:
-            return _simple_root(keys)
-        elif path == possible_pkg_path:
-            return _package_root(keys, path, possible_pkg_name)
-        else:
-            return _404('Not found')
+    if path == pipsy_simple_root:
+        return _simple_root(keys)
+    elif path == possible_pkg_path:
+        return _package_root(keys, path, possible_pkg_name)
     else:
         return _404('Not found')
 
