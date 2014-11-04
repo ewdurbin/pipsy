@@ -77,6 +77,9 @@ def root_route(path):
     for key in s3_bucket.list(prefix=path, delimiter='/'):
         keys.append(key.name)
 
+    if not keys:
+        return _404('Not found')
+
     if len(keys) == 1 and keys[0] == path_with_seperator:
         return redirect(path_with_seperator)
 
