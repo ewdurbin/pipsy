@@ -95,6 +95,8 @@ def _package_root(keys, path, package_name):
     body = []
     for key in keys:
         if key != path:
+            package_key = s3_bucket.get_key(key)
+            package_hash = package_key.etag.strip('"')
             body.append("<a href='{0}'>{0}</a><br/>".format(os.path.basename(key)))
 
     return PKG_TEMPLATE.format(body="\n".join(body), package_name=package_name)
