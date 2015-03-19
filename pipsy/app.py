@@ -105,7 +105,7 @@ def _package_root(keys, path, package_name):
 def _simple_root(keys):
     body = []
     for key in keys:
-        body.append("<a href='{0}'>{0}</a><br/>".format(os.path.basename(key[:-1])))
+        body.append("<a href='{0}/'>{0}</a><br/>".format(os.path.basename(key[:-1])))
 
     return SIMPLE_TEMPLATE.format(body="\n".join(body))
 
