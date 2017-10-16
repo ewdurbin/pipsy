@@ -27,11 +27,11 @@ SIMPLE_TEMPLATE = """
 PKG_TEMPLATE = """
 <html>
 <head>
-  <title>Links for {package_name}</title>
+  <title>Links for {project_name}</title>
   <meta name="api-version" value="2" />
 </head>
 <body>
-<h1>Links for {package_name}</h1>
+<h1>Links for {project_name}</h1>
 {body}
 </body>
 </html>
@@ -57,11 +57,16 @@ class IndexHandler(web.View):
                 for k in result.get('CommonPrefixes', []):
                     keys.append(k['Prefix'])
 
+        projects = sorted(list({normalize(k.rstrip('/')) for k in keys}))
+        body = [f"  <a href='{project}/'>{project}</a><br/>" for project in projects]
+        body = SIMPLE_TEMPLATE.format(body="\n".join(body))
+
         return web.Response(
                 status=200,
-                body=json.dumps({
-                    'keys': keys,
-                }),
+                body=body,
+                headers={
+                    'Content-Type': 'text/html; charset=utf-8',
+                }
             )
 
 
@@ -89,13 +94,21 @@ class ProjectHandler(web.View):
             paginator = client.get_paginator('list_objects_v2')
             async for result in paginator.paginate(Bucket=PIPSY_BUCKET, Prefix=prefix):
                 for k in result.get('Contents', []):
-                    keys.append({"key": k['Key'], "etag": k['ETag'].replace('"', '')})
+                    keys.append({
+                        "key": k['Key'],
+                        "release_file": os.path.basename(k['Key']),
+                        "etag": k['ETag'].strip('"'),
+                    })
+
+        body = [f"<a href='{l['release_file']}#md5={l['etag']}' rel='internal'>{l['release_file']}</a><br/>" for l in keys]
+        body = PKG_TEMPLATE.format(body="\n".join(body), project_name=project_name)
 
         return web.Response(
                 status=200,
-                body=json.dumps({
-                    'keys': keys,
-                }),
+                body=body,
+                headers={
+                    'Content-Type': 'text/html; charset=utf-8',
+                }
             )
 
 
@@ -120,7 +133,7 @@ class ReleaseFileHandler(web.View):
             release = await client.get_object(Bucket=PIPSY_BUCKET, Key=key)
             data = {
                 'ContentType': release['ContentType'],
-                'ETag': release['ETag'].replace('"', ''),
+                'ETag': release['ETag'].strip('"'),
             }
 
         return web.Response(
@@ -137,58 +150,3 @@ app.router.add_route('GET', '/simple/{project_name}', ProjectHandler)
 app.router.add_route('GET', '/simple/{project_name}/', ProjectHandler)
 app.router.add_route('GET', '/simple/{project_name}/{release_file}', ReleaseFileHandler)
 web.run_app(app, host='127.0.0.1', port=8080)
-
-#@APP.route('/', methods=['GET'], defaults={'path': ''})
-#@APP.route('/<path:path>')
-#def root_route(path):
-#    keys = []
-#    path_with_seperator = "{0}/".format(path)
-#    pipsy_simple_root = "{0}/".format(PIPSY_SIMPLE_ROOT)
-#    possible_pkg_name = os.path.basename(path[:-1])
-#    possible_pkg_path = "{0}/{1}/".format(PIPSY_SIMPLE_ROOT, possible_pkg_name)
-#
-#    for key in s3_bucket.list(prefix=path, delimiter='/'):
-#        keys.append(key.name)
-#
-#    if not keys:
-#        return _404('Not found')
-#
-#    if len(keys) == 1 and keys[0] == path_with_seperator:
-#        return redirect(path_with_seperator)
-#
-#    if path == pipsy_simple_root:
-#        return _simple_root(keys)
-#    elif path == possible_pkg_path:
-#        return _package_root(keys, path, possible_pkg_name)
-#    else:
-#        return _404('Not found')
-#
-#
-#def _package_root(keys, path, package_name):
-#    body = []
-#    for key in keys:
-#        if key != path:
-#            package_key = s3_bucket.get_key(key)
-#            package_hash = package_key.etag.strip('"')
-#            body.append("<a href='{0}#md5={1}' rel='internal'>{0}</a><br/>".format(os.path.basename(key), package_hash))
-#
-#    return PKG_TEMPLATE.format(body="\n".join(body), package_name=package_name)
-#
-#
-#def _simple_root(keys):
-#    body = []
-#    for key in keys:
-#        body.append("<a href='{0}/'>{0}</a><br/>".format(os.path.basename(key[:-1])))
-#
-#    return SIMPLE_TEMPLATE.format(body="\n".join(body))
-#
-#
-#def _404(message):
-#    return message, 404
-#
-#
-#def main():
-#    APP.run()
-#
-#if __name__ == "__main__":
-#    main()
