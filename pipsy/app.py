@@ -46,71 +46,96 @@ class IndexHandler(web.View):
 
     async def get(self):
 
-        data = {}
+        if not self.request.path.endswith('/'):
+            return web.HTTPFound(self.request.path + '/')
+
         keys = []
-        path = self.request.match_info.get('path', '')
-        parts = [part for part in path.split('/') if part]
-
-        if len(parts) == 0:
-            session = aiobotocore.get_session()
-            async with session.create_client('s3') as client:
-                paginator = client.get_paginator('list_objects_v2')
-                async for result in paginator.paginate(Bucket=PIPSY_BUCKET, Prefix=PIPSY_SIMPLE_ROOT, Delimiter="/"):
-                    for k in result.get('CommonPrefixes', []):
-                        keys.append(k['Prefix'])
-
-
-        if len(parts) == 1:
-            if normalize(parts[0]) != parts[0]:
-                return web.HTTPFound(f'/simple/{normalize(parts[0])}/')
-            pkg_name = parts[0]
-
-            if PIPSY_SIMPLE_ROOT:
-                prefix = '/'.join([PIPSY_SIMPLE_ROOT, pkg_name])
-            else:
-                prefix = pkg_name
-
-            session = aiobotocore.get_session()
-            async with session.create_client('s3') as client:
-                paginator = client.get_paginator('list_objects_v2')
-                async for result in paginator.paginate(Bucket=PIPSY_BUCKET, Prefix=prefix):
-                    for k in result.get('Contents', []):
-                        keys.append({"key": k['Key'], "etag": k['ETag'].replace('"', '')})
-
-        if len(parts) == 2:
-            pkg_name, file_name = parts
-            if normalize(pkg_name) != pkg_name:
-                return web.HTTPFound(f'/simple/{normalize(parts[0])}/{file_name}')
-
-            if PIPSY_SIMPLE_ROOT:
-                key = '/'.join([PIPSY_SIMPLE_ROOT, pkg_name, file_name])
-            else:
-                key = '/'.join([pkg_name, file_name])
-
-            session = aiobotocore.get_session()
-            async with session.create_client('s3') as client:
-                release = await client.get_object(Bucket=PIPSY_BUCKET, Key=key)
-                data = {
-                    'ContentType': release['ContentType'],
-                    'ETag': release['ETag'].replace('"', ''),
-                }
-
-        if len(parts) > 2:
-            return web.HTTPNotFound()
+        session = aiobotocore.get_session()
+        async with session.create_client('s3') as client:
+            paginator = client.get_paginator('list_objects_v2')
+            async for result in paginator.paginate(Bucket=PIPSY_BUCKET, Prefix=PIPSY_SIMPLE_ROOT, Delimiter="/"):
+                for k in result.get('CommonPrefixes', []):
+                    keys.append(k['Prefix'])
 
         return web.Response(
                 status=200,
                 body=json.dumps({
-                    'path': path,
-                    'parts': parts,
                     'keys': keys,
-                    'key': data,
+                }),
+            )
+
+
+class ProjectHandler(web.View):
+
+    async def get(self):
+
+        if not self.request.path.endswith('/'):
+            return web.HTTPFound(self.request.path + '/')
+
+        keys = []
+        project_name = self.request.match_info.get('project_name', '')
+
+        if normalize(project_name) != project_name:
+            return web.HTTPFound(f'/simple/{normalize(project_name)}/')
+        project_name = normalize(project_name)
+
+        if PIPSY_SIMPLE_ROOT:
+            prefix = '/'.join([PIPSY_SIMPLE_ROOT, project_name])
+        else:
+            prefix = project_name
+
+        session = aiobotocore.get_session()
+        async with session.create_client('s3') as client:
+            paginator = client.get_paginator('list_objects_v2')
+            async for result in paginator.paginate(Bucket=PIPSY_BUCKET, Prefix=prefix):
+                for k in result.get('Contents', []):
+                    keys.append({"key": k['Key'], "etag": k['ETag'].replace('"', '')})
+
+        return web.Response(
+                status=200,
+                body=json.dumps({
+                    'keys': keys,
+                }),
+            )
+
+
+class ReleaseFileHandler(web.View):
+
+    async def get(self):
+
+        data = {}
+        project_name = self.request.match_info.get('project_name', '')
+        release_file = self.request.match_info.get('release_file', '')
+
+        if normalize(project_name) != project_name:
+            return web.HTTPFound(f'/simple/{normalize(project_name)}/{release_file}')
+
+        if PIPSY_SIMPLE_ROOT:
+            key = '/'.join([PIPSY_SIMPLE_ROOT, project_name, release_file])
+        else:
+            key = '/'.join([project_name, release_file])
+
+        session = aiobotocore.get_session()
+        async with session.create_client('s3') as client:
+            release = await client.get_object(Bucket=PIPSY_BUCKET, Key=key)
+            data = {
+                'ContentType': release['ContentType'],
+                'ETag': release['ETag'].replace('"', ''),
+            }
+
+        return web.Response(
+                status=200,
+                body=json.dumps({
+                    'data': data,
                 }),
             )
 
 app = web.Application()
 app.router.add_route('GET', '/simple', IndexHandler)
-app.router.add_route('GET', '/simple/{path:.*}', IndexHandler)
+app.router.add_route('GET', '/simple/', IndexHandler)
+app.router.add_route('GET', '/simple/{project_name}', ProjectHandler)
+app.router.add_route('GET', '/simple/{project_name}/', ProjectHandler)
+app.router.add_route('GET', '/simple/{project_name}/{release_file}', ReleaseFileHandler)
 web.run_app(app, host='127.0.0.1', port=8080)
 
 #@APP.route('/', methods=['GET'], defaults={'path': ''})
