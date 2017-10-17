@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import sys
 
 import aiobotocore
 from aiohttp import web
@@ -31,7 +30,7 @@ PKG_TEMPLATE = """
   <meta name="api-version" value="2" />
 </head>
 <body>
-<h1>Links for {project_name}</h1>
+  <h1>Links for {project_name}</h1>
 {body}
 </body>
 </html>
@@ -100,7 +99,7 @@ class ProjectHandler(web.View):
                         "etag": k['ETag'].strip('"'),
                     })
 
-        body = [f"<a href='{l['release_file']}#md5={l['etag']}' rel='internal'>{l['release_file']}</a><br/>" for l in keys]
+        body = [f"  <a href='{l['release_file']}#md5={l['etag']}' rel='internal'>{l['release_file']}</a><br/>" for l in keys]
         body = PKG_TEMPLATE.format(body="\n".join(body), project_name=project_name)
 
         return web.Response(
