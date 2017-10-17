@@ -141,6 +141,7 @@ class ReleaseFileHandler(web.View):
                     "ETag": release['ETag'].strip('"'),
                 }
             )
+            response.content_length = release['ContentLength']
             await response.prepare(self.request)
             while True:
                 data = await release['Body'].read(8192)
