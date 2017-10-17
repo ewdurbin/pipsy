@@ -129,18 +129,27 @@ class ReleaseFileHandler(web.View):
 
         session = aiobotocore.get_session()
         async with session.create_client('s3') as client:
-            release = await client.get_object(Bucket=PIPSY_BUCKET, Key=key)
-            data = {
-                'ContentType': release['ContentType'],
-                'ETag': release['ETag'].strip('"'),
-            }
+            try:
+                release = await client.get_object(Bucket=PIPSY_BUCKET, Key=key)
+            except client.exceptions.NoSuchKey:
+                raise web.HTTPNotFound()
 
-        return web.Response(
+            response = web.StreamResponse(
                 status=200,
-                body=json.dumps({
-                    'data': data,
-                }),
+                headers={
+                    "Content-Type": release['ContentType'],
+                    "ETag": release['ETag'].strip('"'),
+                }
             )
+            await response.prepare(self.request)
+            while True:
+                data = await release['Body'].read(8192)
+                if not data:
+                    await response.drain()
+                    break
+                response.write(data)
+            return response
+
 
 app = web.Application()
 app.router.add_route('GET', '/simple', IndexHandler)
