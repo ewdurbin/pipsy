@@ -242,7 +242,7 @@ class ProxyReleaseFileHandler(web.View):
 
         url = urlunparse((scheme, netloc, package_path, None, None, None))
 
-        asyncio.ensure_future(cache_package(project_name, url, package_path))
+        asyncio.ensure_future(cache_package(normalize_project_name(project_name), url, package_path))
 
         return await self.stream_file_from_url(url)
 
