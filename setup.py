@@ -9,7 +9,7 @@ CWD = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(CWD, 'README.md')).read()
 
 INSTALL_REQUIREMENTS =  [
-    'Flask==0.10.1',
+    'Flask==1.0',
     'Flask-SSLify==0.1.4',
     'Jinja2==2.7.3',
     'MarkupSafe==0.23',
