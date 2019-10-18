@@ -13,7 +13,7 @@ INSTALL_REQUIREMENTS =  [
     'Flask-SSLify==0.1.4',
     'Jinja2==2.7.3',
     'MarkupSafe==0.23',
-    'Werkzeug==0.9.6',
+    'Werkzeug==0.15.3',
     'boto==2.33.0',
     'itsdangerous==0.24',
     'wsgiref==0.1.2',
