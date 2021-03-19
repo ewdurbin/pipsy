@@ -11,7 +11,7 @@ README = open(os.path.join(CWD, 'README.md')).read()
 INSTALL_REQUIREMENTS =  [
     'Flask==0.10.1',
     'Flask-SSLify==0.1.4',
-    'Jinja2==2.7.3',
+    'Jinja2==2.11.3',
     'MarkupSafe==0.23',
     'Werkzeug==0.9.6',
     'boto==2.33.0',
